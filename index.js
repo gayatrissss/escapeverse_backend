@@ -27,24 +27,17 @@ dotenv.config();
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
-  cors: { origin: process.env.CLIENT_URL || 'http://localhost:5173', methods: ['GET', 'POST'] }
+  cors: {
+    origin: true,
+    methods: ["GET", "POST"],
+    credentials: true
+  }
 });
 
 // Middleware
 app.use(helmet({ crossOriginResourcePolicy: false }));
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://escapeverse-frontend-one.vercel.app"
-];
-
 app.use(cors({
-  origin: function(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
+  origin: true,
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
