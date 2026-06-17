@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import { auth } from '../middleware/auth.js';
 import Room from '../models/Room.js';
 
@@ -53,16 +54,26 @@ router.get('/:roomId', auth, async (req, res) => {
 // Join room
 router.post('/:roomId/join', auth, async (req, res) => {
   try {
+    // Check MongoDB connection
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ message: 'Database unavailable', dbState: mongoose.connection.readyState });
+    }
+
     const room = await Room.findById(req.params.roomId);
     if (!room) return res.status(404).json({ message: 'Room not found' });
     if (room.type === 'private' && room.password !== req.body.password) {
       return res.status(403).json({ message: 'Incorrect password' });
     }
-    await room.addPlayer(req.userId, req.user.username);
+    try {
+      await room.addPlayer(req.userId, req.user?.username || 'Anonymous');
+    } catch (addErr) {
+      return res.status(400).json({ message: addErr.message });
+    }
     const updated = await Room.findById(req.params.roomId)
       .populate('players.userId', 'username avatar level');
     res.json({ room: updated, message: 'Joined room' });
   } catch (error) {
+    console.error('Room join error:', error.message, error.stack);
     res.status(500).json({ message: error.message });
   }
 });

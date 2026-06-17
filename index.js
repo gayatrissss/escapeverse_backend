@@ -68,8 +68,21 @@ app.use('/api/friends', friendsRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/daily', dailyRoutes);
 
-// Health check
-app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '1.0.0' }));
+// Health check with DB test
+app.get('/api/health', async (req, res) => {
+  try {
+    const dbState = mongoose.connection.readyState;
+    const states = { 0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting' };
+    res.json({
+      status: dbState === 1 ? 'ok' : 'degraded',
+      version: '1.0.0',
+      db: states[dbState] || 'unknown',
+      uptime: process.uptime()
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+});
 
 // Socket.io
 setupSocket(io);
